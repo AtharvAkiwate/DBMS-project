@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cast Your Vote - Campus Vote</title>
+  <meta name="description" content="Cast your vote securely in the college election.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"></path><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"></path><path d="M22 19H2"></path></svg>
+        </div>
+        Campus Vote
+      </a>
+      
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          Home
+        </a>
+        <a href="register.html" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" x2="19" y1="8" y2="14"></line><line x1="22" x2="16" y1="11" y2="11"></line></svg>
+          Register
+        </a>
+        <a href="campaign.html" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Campaigns
+        </a>
+        <a href="vote.html" class="nav-link active">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"></path><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"></path><path d="M22 19H2"></path></svg>
+          Vote
+        </a>
+        <a href="admin.html" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"></line><line x1="18" x2="18" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="16"></line></svg>
+          Results
+        </a>
+      </div>
+      
+      <button class="mobile-menu-btn" id="mobile-menu-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
+      </button>
+    </div>
+  </nav>
+  
+  <!-- Mobile Navigation -->
+  <div class="mobile-nav" id="mobile-nav">
+    <div id="mobile-nav-overlay" style="position:absolute;inset:0;"></div>
+    <div class="mobile-nav-content">
+      <div class="mobile-nav-header">
+        <span class="logo">Campus Vote</span>
+        <button id="mobile-nav-close" style="background:none;border:none;cursor:pointer;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+      </div>
+      <a href="index.html" class="mobile-nav-link">Home</a>
+      <a href="register.html" class="mobile-nav-link">Register as Candidate</a>
+      <a href="campaign.html" class="mobile-nav-link">View Campaigns</a>
+      <a href="vote.html" class="mobile-nav-link active">Cast Your Vote</a>
+      <a href="admin.html" class="mobile-nav-link">View Results</a>
+    </div>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="container">
+      <h1>Cast Your Vote</h1>
+      <p>Your vote matters! Select your preferred candidate below</p>
+    </div>
+  </div>
+
+  <!-- Voting Section -->
+  <section class="section" style="padding-top:0;">
+    <div class="container">
+      <!-- Voting Steps -->
+      <div class="voting-steps">
+        <div class="voting-step active" id="step-1">
+          <span class="voting-step-number">1</span>
+          Verify Identity
+        </div>
+        <div class="voting-step" id="step-2">
+          <span class="voting-step-number">2</span>
+          Select Candidate
+        </div>
+      </div>
+
+      <!-- Step 1: Voter Verification -->
+      <div class="voter-verification">
+        <div class="card">
+          <div class="card-body" style="padding:2rem;">
+            <h3 style="margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              Voter Verification
+            </h3>
+            <p class="text-muted" style="margin-bottom:1.5rem;font-size:0.875rem;">
+              Please enter your details to verify your identity before voting. Each student can only vote once.
+            </p>
+            
+            <form id="verification-form">
+              <div class="form-group">
+                <label class="form-label" for="voterName">
+                  Full Name <span class="required">*</span>
+                </label>
+                <input type="text" id="voterName" name="voterName" class="form-input" placeholder="Enter your full name" required>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="voterId">
+                  Student ID <span class="required">*</span>
+                </label>
+                <input type="text" id="voterId" name="voterId" class="form-input" placeholder="Enter your student ID" required>
+              </div>
+              
+              <div class="alert alert-info" style="margin-bottom:1.5rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>Your vote is secure and anonymous. Your student ID is only used to prevent duplicate voting.</span>
+              </div>
+              
+              <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Verify & Continue
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Candidate Selection (Hidden initially) -->
+      <div id="voting-section" class="hidden" style="max-width:700px;margin:0 auto;">
+        <div class="card">
+          <div class="card-body" style="padding:2rem;">
+            <h3 style="margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"></path><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"></path><path d="M22 19H2"></path></svg>
+              Select Your Candidate
+            </h3>
+            <p class="text-muted" style="margin-bottom:1.5rem;font-size:0.875rem;">
+              Choose the candidate you want to vote for. Click on a candidate to select them.
+            </p>
+            
+            <div id="voting-candidates" style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1.5rem;">
+              <!-- Candidates will be rendered by JavaScript -->
+            </div>
+            
+            <div class="alert alert-warning" style="margin-bottom:1.5rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+              <span>Once submitted, your vote cannot be changed. Please review your selection carefully.</span>
+            </div>
+            
+            <button type="button" id="submit-vote-btn" class="btn btn-accent btn-lg" style="width:100%;" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"></path><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"></path><path d="M22 19H2"></path></svg>
+              Submit Vote
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"></path><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"></path><path d="M22 19H2"></path></svg>
+          Campus Vote 2026
+        </div>
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="register.html">Register</a>
+          <a href="campaign.html">Campaigns</a>
+          <a href="vote.html">Vote</a>
+          <a href="admin.html">Results</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
