@@ -7,6 +7,8 @@
 // Data Management (localStorage)
 // =============================================
 
+console.log("JS LOADED");
+
 const StorageKeys = {
   CANDIDATES: 'election_candidates',
   VOTERS: 'election_voters',
@@ -25,16 +27,54 @@ function saveCandidates(candidates) {
 }
 
 // Add a new candidate
-function addCandidate(candidate) {
-  const candidates = getCandidates();
-  const newCandidate = {
-    ...candidate,
-    id: generateId(),
-    createdAt: new Date().toISOString()
-  };
-  candidates.push(newCandidate);
-  saveCandidates(candidates);
-  return newCandidate;
+function initRegistrationForm() {
+  const form = document.getElementById('registration-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const profileInput = document.getElementById('profileImage');
+    const symbolImageInput = document.getElementById('symbolImage');
+    const symbolType = formData.get('symbolType');
+
+    // Convert Profile Image to String
+    let profileBase64 = "";
+    if (profileInput.files[0]) {
+      profileBase64 = await fileToBase64(profileInput.files[0]);
+    }
+
+    // Convert Symbol to String (if it's an image)
+    let symbolValue = "";
+    if (symbolType === 'text') {
+      symbolValue = document.getElementById("symbolTextInput").value;
+    } else if (symbolImageInput.files[0]) {
+      symbolValue = await fileToBase64(symbolImageInput.files[0]);
+    }
+
+    const payload = {
+      name: document.getElementById("fullName").value,
+      branch: document.getElementById("branch").value,
+      year: document.getElementById("year").value,
+      cid: document.getElementById("candidateId").value,
+      symbol: symbolValue,
+      image: profileBase64, 
+      desc: document.getElementById("description").value
+    };
+
+    fetch("http://localhost:5000/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.text())
+    .then(msg => {
+      alert(msg);
+      window.location.href = 'campaign.html';
+    })
+    .catch(err => console.error(err));
+  });
 }
 
 // Get candidate by ID
@@ -429,15 +469,35 @@ function initRegistrationForm() {
       campaignMedia: campaignMedia
     };
     
-    addCandidate(candidate);
-    showToast('Registration successful! Your candidacy has been submitted.');
-    
-    setTimeout(() => {
-      window.location.href = 'campaign.html';
-    }, 1500);
+   // --- REPLACE FROM HERE ---
+    fetch("http://localhost:5000/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name: candidate.fullName,
+        branch: candidate.branch,
+        year: candidate.year,
+        cid: candidate.candidateId,
+        symbol: candidate.symbol,
+        image: candidate.profileImage, // This sends the actual photo string
+        desc: candidate.description
+      })
+    })
+    .then(res => res.text())
+    .then(msg => {
+      showToast('Registration successful!');
+      setTimeout(() => {
+        window.location.href = 'campaign.html';
+      }, 1500);
+    })
+    .catch(err => {
+      console.error("Error:", err);
+      showToast('Registration failed. Check console.', 'error');
+    });
+    // --- TO HERE ---
   });
-  
-  renderMediaGrid();
 }
 
 // =============================================
@@ -539,6 +599,36 @@ function initVotingInterface() {
   });
 }
 
+function vote(candidateId) {
+
+  const name = document.getElementById("voterName").value;
+  const branch = document.getElementById("branch").value;
+  const studentId = document.getElementById("voterId").value;
+  const roll = document.getElementById("roll").value;
+
+  if (!name || !studentId) {
+    alert("Fill all details");
+    return;
+  }
+
+  fetch("http://localhost:5000/vote", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name: name,
+      branch: branch,
+      student_id: studentId,
+      roll: roll,
+      candidate_id: candidateId
+    })
+  })
+  .then(res => res.text())
+  .then(msg => alert(msg))
+  .catch(err => console.error(err));
+}
+
 // =============================================
 // Admin/Results Page
 // =============================================
@@ -615,167 +705,110 @@ function initAdminPage() {
 // Candidate Detail Page
 // =============================================
 
+//loading the candidates
+function loadCandidates() {
+  console.log("Fetching candidates from database...");
+
+  fetch("http://localhost:5000/candidates")
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById("candidates-grid");
+      if (!container) return;
+
+      container.innerHTML = "";
+
+      if (!data || data.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            <h3>No Candidates Yet</h3>
+            <p>Be the first to register as a candidate!</p>
+            <a href="register.html" class="btn btn-primary">Register Now</a>
+          </div>`;
+        return;
+      }
+
+      data.forEach(c => {
+        const card = `
+          <a href="candidate.html?id=${c.id}" class="candidate-card">
+            <div class="candidate-image">
+              <div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem;background:var(--primary-bg);color:var(--primary);font-weight:700;">
+                ${c.name.charAt(0)}
+              </div>
+              <div class="candidate-symbol">
+                ${c.symbol || '?'}
+              </div>
+            </div>
+            <div class="candidate-info">
+              <h3 class="candidate-name">${c.name}</h3>
+              <div class="candidate-meta">
+                <span class="branch">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+                  ${c.branch}
+                </span>
+                <span class="year">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line></svg>
+                  ${c.year}
+                </span>
+              </div>
+              <p class="candidate-description">${c.description}</p>
+              <div class="view-profile">
+                View Profile 
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+              </div>
+            </div>
+          </a>
+        `;
+        container.innerHTML += card;
+      });
+    })
+    .catch(err => console.error("Database fetch error:", err));
+}
+
+function openCandidate(id) {
+  window.location.href = `candidate.html?id=${id}`;
+}
+
 function initCandidateDetail() {
   const container = document.getElementById('candidate-detail-container');
   if (!container) return;
-  
+
   const urlParams = new URLSearchParams(window.location.search);
   const candidateId = urlParams.get('id');
-  
-  if (!candidateId) {
-    container.innerHTML = '<div class="empty-state"><h3>Candidate not found</h3><a href="campaign.html" class="btn btn-primary">Back to Campaigns</a></div>';
-    return;
-  }
-  
-  const candidate = getCandidateById(candidateId);
-  
-  if (!candidate) {
-    container.innerHTML = '<div class="empty-state"><h3>Candidate not found</h3><a href="campaign.html" class="btn btn-primary">Back to Campaigns</a></div>';
-    return;
-  }
-  
-  const media = candidate.campaignMedia || [];
-  const images = media.filter(m => m.type === 'image');
-  const videos = media.filter(m => m.type === 'video');
-  
-  container.innerHTML = `
-    <a href="campaign.html" class="btn btn-secondary" style="margin-bottom:1.5rem;">
-      ${getSVGIcon('arrow-left')} Back to Campaigns
-    </a>
-    
-    <div class="candidate-detail-header">
-      <div class="candidate-detail-image">
-        ${candidate.profileImage 
-          ? `<img src="${candidate.profileImage}" alt="${candidate.fullName}">`
-          : `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--border-light);font-size:6rem;color:var(--muted);">${candidate.fullName.charAt(0)}</div>`
-        }
-      </div>
-      
-      <div class="candidate-detail-info">
-        <h1 class="candidate-detail-name">
-          ${candidate.fullName}
-          <div class="candidate-detail-symbol">
-            ${candidate.symbolType === 'image' && candidate.symbol
-              ? `<img src="${candidate.symbol}" alt="Symbol">`
-              : candidate.symbol || '?'
-            }
+
+  fetch(`http://localhost:5000/candidate/${candidateId}`)
+    .then(res => res.json())
+    .then(c => {
+      // Check if symbol is a string or an image
+      const isSymbolImage = c.symbol && c.symbol.startsWith('data:image');
+      const symbolContent = isSymbolImage 
+        ? `<img src="${c.symbol}" style="width:100%; height:100%; object-fit:cover;">` 
+        : c.symbol;
+
+      container.innerHTML = `
+        <div class="candidate-detail-header">
+          <div class="candidate-detail-image">
+            <img src="${c.image}" onerror="this.src='https://via.placeholder.com/300'">
           </div>
-        </h1>
-        
-        <div class="candidate-detail-meta">
-          <div class="candidate-detail-meta-item branch">
-            ${getSVGIcon('graduation-cap')}
-            ${candidate.branch}
-          </div>
-          <div class="candidate-detail-meta-item year">
-            ${getSVGIcon('calendar')}
-            ${candidate.year}
-          </div>
-          <div class="candidate-detail-meta-item id">
-            ${getSVGIcon('id-card')}
-            ${candidate.candidateId}
-          </div>
-        </div>
-        
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-          <a href="vote.html" class="btn btn-primary btn-lg">
-            ${getSVGIcon('vote')} Vote for ${candidate.fullName.split(' ')[0]}
-          </a>
-        </div>
-      </div>
-    </div>
-    
-    <div class="manifesto-section">
-      <h3>${getSVGIcon('file-text')} Campaign Manifesto</h3>
-      <p class="manifesto-text">${candidate.description || 'No manifesto provided.'}</p>
-    </div>
-    
-    ${media.length > 0 ? `
-      <div class="gallery-section">
-        <div class="gallery-header">
-          <h3>${getSVGIcon('gallery')} Campaign Gallery</h3>
-          <div class="gallery-counts">
-            <span class="gallery-count images">${getSVGIcon('image')} ${images.length} images</span>
-            <span class="gallery-count videos">${getSVGIcon('video')} ${videos.length} videos</span>
-          </div>
-        </div>
-        <div class="gallery-grid">
-          ${media.map((item, index) => `
-            <div class="gallery-item" onclick="openLightbox(${index})">
-              ${item.type === 'video'
-                ? `<video src="${item.url}"></video><div class="play-overlay">${getSVGIcon('play')}</div>`
-                : `<img src="${item.url}" alt="Campaign media">`
-              }
+          <div class="candidate-detail-info">
+            <h1 class="candidate-detail-name">
+              ${c.name}
+              <div class="candidate-detail-symbol">${symbolContent}</div>
+            </h1>
+            <div class="candidate-detail-meta">
+              <div class="candidate-detail-meta-item branch">Branch: ${c.branch}</div>
+              <div class="candidate-detail-meta-item year">Year: ${c.year}</div>
+              <div class="candidate-detail-meta-item id">ID: ${c.candidate_id}</div>
             </div>
-          `).join('')}
+            <button class="btn btn-primary btn-lg" onclick="vote(${c.id})">Cast Vote</button>
+          </div>
         </div>
-      </div>
-    ` : ''}
-  `;
-  
-  // Lightbox functionality
-  if (media.length > 0) {
-    let currentIndex = 0;
-    
-    window.openLightbox = (index) => {
-      currentIndex = index;
-      showLightbox();
-    };
-    
-    function showLightbox() {
-      const item = media[currentIndex];
-      
-      let overlay = document.getElementById('lightbox-overlay');
-      if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'lightbox-overlay';
-        overlay.className = 'modal-overlay';
-        document.body.appendChild(overlay);
-      }
-      
-      overlay.innerHTML = `
-        <div class="modal-content">
-          <button class="modal-close" onclick="closeLightbox()">${getSVGIcon('x')}</button>
-          ${media.length > 1 ? `<button class="modal-nav prev" onclick="prevMedia()">${getSVGIcon('chevron-left')}</button>` : ''}
-          ${item.type === 'video'
-            ? `<video src="${item.url}" controls autoplay style="max-width:90vw;max-height:80vh;"></video>`
-            : `<img src="${item.url}" alt="Campaign media">`
-          }
-          ${media.length > 1 ? `<button class="modal-nav next" onclick="nextMedia()">${getSVGIcon('chevron-right')}</button>` : ''}
-          ${item.caption ? `<div class="modal-caption">${item.caption}</div>` : ''}
-          <div class="modal-caption">${currentIndex + 1} / ${media.length}</div>
+        <div class="manifesto-section">
+          <h3>Campaign Manifesto</h3>
+          <div class="manifesto-text">${c.description}</div>
         </div>
       `;
-      
-      overlay.classList.add('open');
-      document.body.style.overflow = 'hidden';
-    }
-    
-    window.closeLightbox = () => {
-      const overlay = document.getElementById('lightbox-overlay');
-      if (overlay) {
-        overlay.classList.remove('open');
-        document.body.style.overflow = '';
-      }
-    };
-    
-    window.prevMedia = () => {
-      currentIndex = (currentIndex - 1 + media.length) % media.length;
-      showLightbox();
-    };
-    
-    window.nextMedia = () => {
-      currentIndex = (currentIndex + 1) % media.length;
-      showLightbox();
-    };
-    
-    // Close on escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowLeft') prevMedia();
-      if (e.key === 'ArrowRight') nextMedia();
     });
-  }
 }
 
 // =============================================
