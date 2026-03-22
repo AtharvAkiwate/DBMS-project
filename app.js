@@ -1,3 +1,4 @@
+
 /* =============================================
    Campus Vote - College Election Website
    Main JavaScript File
@@ -926,4 +927,3 @@ function fileToBase64(file) {
     reader.onerror = error => reject(error);
   });
 }
-
