@@ -478,13 +478,18 @@ function initRegistrationForm() {
     
     // 3. Convert Symbol (Safety check added here)
     let symbol = '';
-    if (symbolType === 'text') {
-      symbol = formData.get('symbolText') || document.getElementById('symbolTextInput').value;
-    } else if (symbolImageInput && symbolImageInput.files && symbolImageInput.files[0]) {
-      symbol = await fileToBase64(symbolImageInput.files[0]);
-    }
+
+if (symbolType === 'image') {
+  if (symbolImageInput.files && symbolImageInput.files[0]) {
+    symbol = await fileToBase64(symbolImageInput.files[0]);
+  }
+} else {
+  symbol = formData.get('symbolText') || document.getElementById('symbolTextInput').value;
+}
     
     // 4. Send to Backend (Including campaignMedia for your gallery)
+    console.log("SYMBOL TYPE:", symbolType);
+console.log("SYMBOL VALUE:", symbol);
     fetch("http://localhost:5000/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
