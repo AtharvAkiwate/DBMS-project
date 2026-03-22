@@ -27,54 +27,61 @@ function saveCandidates(candidates) {
 }
 
 // Add a new candidate
-function initRegistrationForm() {
-  const form = document.getElementById('registration-form');
-  if (!form) return;
+function addCandidate() {
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  const submitBtn = document.querySelector("button[type='submit']");
+submitBtn.disabled = true;
+  const name = document.getElementById("fullName").value;
+  const branch = document.getElementById("branch").value;
+  const year = document.getElementById("year").value;
+  const cid = document.getElementById("candidateId").value;
+  const symbol = document.getElementById("symbolTextInput").value;
+  const desc = document.getElementById("description").value;
 
-    const formData = new FormData(form);
-    const profileInput = document.getElementById('profileImage');
-    const symbolImageInput = document.getElementById('symbolImage');
-    const symbolType = formData.get('symbolType');
+  const fileInput = document.getElementById("profileImage");
+  const file = fileInput.files[0];
 
-    // Convert Profile Image to String
-    let profileBase64 = "";
-    if (profileInput.files[0]) {
-      profileBase64 = await fileToBase64(profileInput.files[0]);
-    }
+  if (!name || !branch || !year || !cid || !desc) {
+    alert("Please fill all required fields");
+    return;
+  }
 
-    // Convert Symbol to String (if it's an image)
-    let symbolValue = "";
-    if (symbolType === 'text') {
-      symbolValue = document.getElementById("symbolTextInput").value;
-    } else if (symbolImageInput.files[0]) {
-      symbolValue = await fileToBase64(symbolImageInput.files[0]);
-    }
+  if (!file) {
+    alert("Please upload profile image");
+    return;
+  }
 
-    const payload = {
-      name: document.getElementById("fullName").value,
-      branch: document.getElementById("branch").value,
-      year: document.getElementById("year").value,
-      cid: document.getElementById("candidateId").value,
-      symbol: symbolValue,
-      image: profileBase64, 
-      desc: document.getElementById("description").value
-    };
+  const reader = new FileReader();
+
+  reader.onloadend = function () {
+
+    const image = reader.result;
 
     fetch("http://localhost:5000/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name,
+        branch,
+        year,
+        cid,
+        symbol,
+        image,
+        desc
+      })
     })
     .then(res => res.text())
     .then(msg => {
       alert(msg);
-      window.location.href = 'campaign.html';
+      document.getElementById("registration-form").reset();
     })
-    .catch(err => console.error(err));
-  });
+    .catch(err => console.error("FETCH ERROR:", err));
+  };
+
+  reader.readAsDataURL(file);
+  submitBtn.disabled = false;
 }
 
 // Get candidate by ID
@@ -253,49 +260,62 @@ function updateHomeStats() {
 function renderCandidateCards(containerId, limit = null) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  
-  let candidates = getCandidates();
-  if (limit) candidates = candidates.slice(0, limit);
-  
-  if (candidates.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        ${getSVGIcon('users')}
-        <h3>No Candidates Yet</h3>
-        <p>Be the first to register as a candidate!</p>
-        <a href="register.html" class="btn btn-primary">Register Now</a>
-      </div>
-    `;
-    return;
-  }
-  
-  container.innerHTML = candidates.map(candidate => `
-    <a href="candidate.html?id=${candidate.id}" class="candidate-card">
-      <div class="candidate-image">
-        ${candidate.profileImage 
-          ? `<img src="${candidate.profileImage}" alt="${candidate.fullName}">`
-          : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem;color:var(--muted-light);">${candidate.fullName.charAt(0)}</div>`
-        }
-        <div class="candidate-symbol">
-          ${candidate.symbolType === 'image' && candidate.symbol
-            ? `<img src="${candidate.symbol}" alt="Symbol">`
-            : candidate.symbol || '?'
-          }
-        </div>
-      </div>
-      <div class="candidate-info">
-        <h3 class="candidate-name">${candidate.fullName}</h3>
-        <div class="candidate-meta">
-          <span class="branch">${getSVGIcon('graduation-cap')} ${candidate.branch}</span>
-          <span class="year">${getSVGIcon('calendar')} ${candidate.year}</span>
-        </div>
-        <p class="candidate-description">${candidate.description}</p>
-        <div class="view-profile">
-          View Profile ${getSVGIcon('arrow-right')}
-        </div>
-      </div>
-    </a>
-  `).join('');
+
+  // We fetch from the server now, not getCandidates() localStorage
+  fetch("http://localhost:5000/candidates")
+    .then(res => res.json())
+    .then(candidates => {
+      if (limit) candidates = candidates.slice(0, limit);
+
+      if (!candidates || candidates.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            ${getSVGIcon('users')}
+            <h3>No Candidates Yet</h3>
+            <p>Be the first to register as a candidate!</p>
+            <a href="register.html" class="btn btn-primary">Register Now</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = candidates.map(c => {
+        // Check if symbol is a Base64 image string or plain text
+        const isSymbolImage = c.symbol && c.symbol.startsWith('data:image');
+        
+        return `
+          <a href="candidate.html?id=${c.id}" class="candidate-card">
+            <div class="candidate-image">
+              ${c.image && c.image.startsWith('data:image') 
+                ? `<img src="${c.image}" alt="${c.name}">`
+                : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem;color:var(--muted-light);">${c.name ? c.name.charAt(0) : '?'}</div>`
+              }
+              <div class="candidate-symbol">
+                ${isSymbolImage 
+                  ? `<img src="${c.symbol}" alt="Symbol">` 
+                  : (c.symbol || '?')
+                }
+              </div>
+            </div>
+            <div class="candidate-info">
+              <h3 class="candidate-name">${c.name}</h3>
+              <div class="candidate-meta">
+                <span class="branch">${getSVGIcon('graduation-cap')} ${c.branch}</span>
+                <span class="year">${getSVGIcon('calendar')} ${c.year}</span>
+              </div>
+              <p class="candidate-description">${c.description}</p>
+              <div class="view-profile">
+                View Profile ${getSVGIcon('arrow-right')}
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('');
+    })
+    .catch(err => {
+      console.error("Error loading candidates:", err);
+      container.innerHTML = `<p style="color:red; text-align:center;">Failed to connect to the election server.</p>`;
+    });
 }
 
 // =============================================
@@ -445,58 +465,48 @@ function initRegistrationForm() {
     const formData = new FormData(form);
     const symbolType = formData.get('symbolType');
     
+    // 1. Find elements safely (Ensures they exist before reading files)
+    const profileInput = document.getElementById('profileImage');
+    const symbolImageInput = document.getElementById('symbolImage');
+    
+    // 2. Convert Profile Photo (Safety check added here)
     let profileImage = '';
-    if (profileInput.files[0]) {
+    if (profileInput && profileInput.files && profileInput.files[0]) {
       profileImage = await fileToBase64(profileInput.files[0]);
     }
     
+    // 3. Convert Symbol (Safety check added here)
     let symbol = '';
     if (symbolType === 'text') {
-      symbol = formData.get('symbolText');
-    } else if (symbolImageInput.files[0]) {
+      symbol = formData.get('symbolText') || document.getElementById('symbolTextInput').value;
+    } else if (symbolImageInput && symbolImageInput.files && symbolImageInput.files[0]) {
       symbol = await fileToBase64(symbolImageInput.files[0]);
     }
     
-    const candidate = {
-      fullName: formData.get('fullName'),
-      branch: formData.get('branch'),
-      year: formData.get('year'),
-      candidateId: formData.get('candidateId'),
-      symbolType: symbolType,
-      symbol: symbol,
-      profileImage: profileImage,
-      description: formData.get('description'),
-      campaignMedia: campaignMedia
-    };
-    
-   // --- REPLACE FROM HERE ---
+    // 4. Send to Backend (Including campaignMedia for your gallery)
     fetch("http://localhost:5000/register", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: candidate.fullName,
-        branch: candidate.branch,
-        year: candidate.year,
-        cid: candidate.candidateId,
-        symbol: candidate.symbol,
-        image: candidate.profileImage, // This sends the actual photo string
-        desc: candidate.description
+        name: formData.get('fullName'),
+        branch: formData.get('branch'),
+        year: formData.get('year'),
+        cid: formData.get('candidateId'),
+        symbol: symbol,
+        image: profileImage,
+        desc: formData.get('description'),
+        media: JSON.stringify(typeof campaignMedia !== 'undefined' ? campaignMedia : [])
       })
     })
     .then(res => res.text())
     .then(msg => {
       showToast('Registration successful!');
-      setTimeout(() => {
-        window.location.href = 'campaign.html';
-      }, 1500);
+      setTimeout(() => { window.location.href = 'campaign.html'; }, 1500);
     })
     .catch(err => {
-      console.error("Error:", err);
-      showToast('Registration failed. Check console.', 'error');
+      console.error("Fetch Error:", err);
+      showToast('Registration failed. Is the server running?', 'error');
     });
-    // --- TO HERE ---
   });
 }
 
@@ -717,10 +727,14 @@ function loadCandidates() {
 
       container.innerHTML = "";
 
+      // Empty state (UNCHANGED)
       if (!data || data.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+            </svg>
             <h3>No Candidates Yet</h3>
             <p>Be the first to register as a candidate!</p>
             <a href="register.html" class="btn btn-primary">Register Now</a>
@@ -728,37 +742,64 @@ function loadCandidates() {
         return;
       }
 
+      // Render candidates (UPDATED IMAGE LOGIC ONLY)
       data.forEach(c => {
+
         const card = `
           <a href="candidate.html?id=${c.id}" class="candidate-card">
+
             <div class="candidate-image">
-              <div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem;background:var(--primary-bg);color:var(--primary);font-weight:700;">
-                ${c.name.charAt(0)}
-              </div>
+
+              ${
+                c.image
+                  ? `<img src="${c.image}" alt="${c.name}" style="width:100%;height:100%;object-fit:cover;">`
+                  : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem;background:var(--primary-bg);color:var(--primary);font-weight:700;">
+                       ${c.name.charAt(0)}
+                     </div>`
+              }
+
               <div class="candidate-symbol">
                 ${c.symbol || '?'}
               </div>
+
             </div>
+
             <div class="candidate-info">
               <h3 class="candidate-name">${c.name}</h3>
+
               <div class="candidate-meta">
                 <span class="branch">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                    <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                  </svg>
                   ${c.branch}
                 </span>
+
                 <span class="year">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                  </svg>
                   ${c.year}
                 </span>
               </div>
+
               <p class="candidate-description">${c.description}</p>
+
               <div class="view-profile">
                 View Profile 
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14"></path>
+                  <path d="m12 5 7 7-7 7"></path>
+                </svg>
               </div>
             </div>
+
           </a>
         `;
+
         container.innerHTML += card;
       });
     })
@@ -776,15 +817,41 @@ function initCandidateDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const candidateId = urlParams.get('id');
 
+  if (!candidateId) {
+    container.innerHTML = "<h2>Candidate not found</h2>";
+    return;
+  }
+
   fetch(`http://localhost:5000/candidate/${candidateId}`)
     .then(res => res.json())
     .then(c => {
-      // Check if symbol is a string or an image
+      // 1. Handle the Symbol (Check if it's an image string or plain text/emoji)
       const isSymbolImage = c.symbol && c.symbol.startsWith('data:image');
       const symbolContent = isSymbolImage 
         ? `<img src="${c.symbol}" style="width:100%; height:100%; object-fit:cover;">` 
-        : c.symbol;
+        : (c.symbol || '?');
 
+      // 2. Parse and build the Campaign Media Gallery
+      // We safely check if campaign_media exists and parse it from a JSON string
+      let galleryHTML = '';
+      try {
+        const mediaData = c.campaign_media ? JSON.parse(c.campaign_media) : [];
+        if (mediaData.length > 0) {
+          galleryHTML = mediaData.map(item => `
+            <div class="gallery-item" style="border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--card);">
+              ${item.type === 'video' 
+                ? `<video src="${item.url}" controls style="width:100%; display:block;"></video>` 
+                : `<img src="${item.url}" alt="Campaign Media" style="width:100%; aspect-ratio: 16/9; object-fit: cover; display: block;">`
+              }
+              ${item.caption ? `<p style="padding: 10px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--border-light);">${item.caption}</p>` : ''}
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        console.error("Gallery parsing error:", e);
+      }
+
+      // 3. Render the full candidate profile
       container.innerHTML = `
         <div class="candidate-detail-header">
           <div class="candidate-detail-image">
@@ -796,18 +863,41 @@ function initCandidateDetail() {
               <div class="candidate-detail-symbol">${symbolContent}</div>
             </h1>
             <div class="candidate-detail-meta">
-              <div class="candidate-detail-meta-item branch">Branch: ${c.branch}</div>
-              <div class="candidate-detail-meta-item year">Year: ${c.year}</div>
-              <div class="candidate-detail-meta-item id">ID: ${c.candidate_id}</div>
+              <div class="candidate-detail-meta-item branch">
+                ${getSVGIcon('graduation-cap')} Branch: ${c.branch}
+              </div>
+              <div class="candidate-detail-meta-item year">
+                ${getSVGIcon('calendar')} Year: ${c.year}
+              </div>
+              <div class="candidate-detail-meta-item id">
+                ${getSVGIcon('id-card')} Student ID: ${c.candidate_id}
+              </div>
             </div>
-            <button class="btn btn-primary btn-lg" onclick="vote(${c.id})">Cast Vote</button>
+            <button class="btn btn-primary btn-lg" onclick="vote(${c.id})">
+              ${getSVGIcon('vote')} Cast Vote for ${c.name}
+            </button>
           </div>
         </div>
+
         <div class="manifesto-section">
-          <h3>Campaign Manifesto</h3>
-          <div class="manifesto-text">${c.description}</div>
+          <h3>${getSVGIcon('file-text')} Campaign Manifesto</h3>
+          <div class="manifesto-text" style="white-space: pre-line; line-height: 1.8;">${c.description}</div>
         </div>
+
+        ${galleryHTML ? `
+        <div class="gallery-section" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+          <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+            ${getSVGIcon('gallery')} Campaign Gallery
+          </h3>
+          <div class="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+            ${galleryHTML}
+          </div>
+        </div>` : ''}
       `;
+    })
+    .catch(err => {
+      console.error("Fetch error:", err);
+      container.innerHTML = "<h2>Error loading candidate profile. Ensure your server is running.</h2>";
     });
 }
 
@@ -827,3 +917,13 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCandidateCards('candidates-grid');
   renderCandidateCards('featured-candidates', 3);
 });
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
+
