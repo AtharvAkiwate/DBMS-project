@@ -88,6 +88,87 @@ app.get("/candidate/:id", (req, res) => {
   });
 });
 
+// ==============================
+// VOTING SYSTEM
+// ==============================
+
+app.post("/vote", (req, res) => {
+  const { name, student_id, candidate_id } = req.body;
+
+  if (!name || !student_id || !candidate_id) {
+    return res.send("Missing fields");
+  }
+
+  // Check if already voted
+  const checkSql = "SELECT * FROM voters WHERE student_id = ?";
+  
+  db.query(checkSql, [student_id], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.send("Server error");
+    }
+
+    if (result.length > 0) {
+      return res.send("You have already voted!");
+    }
+
+    // Insert vote
+    const insertSql = `
+      INSERT INTO voters (name, student_id, voted_for)
+      VALUES (?, ?, ?)
+    `;
+
+    db.query(insertSql, [name, student_id, candidate_id], (err) => {
+      if (err) {
+        console.log(err);
+        return res.send("Vote failed");
+      }
+
+      res.send("Vote recorded successfully!");
+    });
+  });
+});
+
+// ==============================
+// GET RESULTS (VOTES COUNT)
+// ==============================
+
+app.get("/results", (req, res) => {
+  const sql = `
+    SELECT c.id, c.name, COUNT(v.id) AS votes
+    FROM candidates c
+    LEFT JOIN voters v ON c.id = v.voted_for
+    GROUP BY c.id
+  `;
+
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json([]);
+    }
+    res.json(result);
+  });
+});
+
+// ==============================
+// CHECK IF VOTER ALREADY VOTED
+// ==============================
+
+app.get("/check-voter/:id", (req, res) => {
+  const studentId = req.params.id;
+
+  const sql = "SELECT * FROM voters WHERE student_id = ?";
+
+  db.query(sql, [studentId], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.json({ exists: false });
+    }
+
+    res.json({ exists: result.length > 0 });
+  });
+});
+
 // START SERVER
 app.listen(5000, () => {
   console.log("Server running on port 5000");

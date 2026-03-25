@@ -540,60 +540,89 @@ function initVotingInterface() {
   let currentVoter = null;
   let selectedCandidate = null;
   
-  verificationForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const formData = new FormData(verificationForm);
-    const voterId = formData.get('voterId');
-    const voterName = formData.get('voterName');
-    
-    if (hasVoted(voterId)) {
-      showToast('You have already cast your vote!', 'error');
-      return;
-    }
-    
-    currentVoter = { id: voterId, name: voterName };
-    
-    // Show voting section
-    verificationForm.parentElement.classList.add('hidden');
-    votingSection.classList.remove('hidden');
-    step1.classList.remove('active');
-    step1.classList.add('completed');
-    step2.classList.add('active');
-    
-    renderVotingCandidates();
-  });
+ verificationForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(verificationForm);
+  const voterId = formData.get('voterId');
+  const voterName = formData.get('voterName');
+
+  if (!voterId || !voterName) {
+    showToast("Please enter all details", "error");
+    return;
+  }
+
+  // 🔥 CHECK FROM DATABASE BEFORE PROCEEDING
+  fetch(`http://localhost:5000/check-voter/${voterId}`)
+    .then(res => res.json())
+    .then(data => {
+
+      if (data.exists) {
+        showToast("You have already voted!", "error");
+        return; // 🚫 STOP HERE
+      }
+
+      // ✅ ALLOW TO PROCEED
+      currentVoter = { id: voterId, name: voterName };
+
+      verificationForm.parentElement.classList.add('hidden');
+      votingSection.classList.remove('hidden');
+      step1.classList.remove('active');
+      step1.classList.add('completed');
+      step2.classList.add('active');
+
+      renderVotingCandidates();
+    })
+    .catch(err => {
+      console.error(err);
+      showToast("Verification failed", "error");
+    });
+});
   
   function renderVotingCandidates() {
-    const candidates = getCandidates();
-    
-    if (candidates.length === 0) {
-      candidatesList.innerHTML = `
-        <div class="empty-state">
-          ${getSVGIcon('users')}
-          <h3>No Candidates Available</h3>
-          <p>There are no registered candidates to vote for.</p>
+
+  fetch("http://localhost:5000/candidates")
+    .then(res => res.json())
+    .then(candidates => {
+
+      if (!candidates || candidates.length === 0) {
+        candidatesList.innerHTML = `
+          <div class="empty-state">
+            ${getSVGIcon('users')}
+            <h3>No Candidates Available</h3>
+            <p>There are no registered candidates to vote for.</p>
+          </div>
+        `;
+        submitVoteBtn.disabled = true;
+        return;
+      }
+
+      candidatesList.innerHTML = candidates.map(candidate => `
+        <div class="voting-candidate-card" data-id="${candidate.id}" onclick="selectCandidate('${candidate.id}')">
+          
+          <div class="voting-candidate-image">
+            ${candidate.image 
+              ? `<img src="${candidate.image}" alt="${candidate.name}">`
+              : `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--border-light);font-size:1.5rem;color:var(--muted);">
+                  ${candidate.name.charAt(0)}
+                </div>`
+            }
+          </div>
+
+          <div class="voting-candidate-info">
+            <div class="voting-candidate-name">${candidate.name}</div>
+            <div class="voting-candidate-branch">${candidate.branch} - ${candidate.year}</div>
+          </div>
+
+          <div class="voting-check">${getSVGIcon('check')}</div>
         </div>
-      `;
-      submitVoteBtn.disabled = true;
-      return;
-    }
-    
-    candidatesList.innerHTML = candidates.map(candidate => `
-      <div class="voting-candidate-card" data-id="${candidate.id}" onclick="selectCandidate('${candidate.id}')">
-        <div class="voting-candidate-image">
-          ${candidate.profileImage 
-            ? `<img src="${candidate.profileImage}" alt="${candidate.fullName}">`
-            : `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--border-light);font-size:1.5rem;color:var(--muted);">${candidate.fullName.charAt(0)}</div>`
-          }
-        </div>
-        <div class="voting-candidate-info">
-          <div class="voting-candidate-name">${candidate.fullName}</div>
-          <div class="voting-candidate-branch">${candidate.branch} - ${candidate.year}</div>
-        </div>
-        <div class="voting-check">${getSVGIcon('check')}</div>
-      </div>
-    `).join('');
-  }
+      `).join('');
+
+    })
+    .catch(err => {
+      console.error("Error loading voting candidates:", err);
+    });
+}
   
   window.selectCandidate = (id) => {
     selectedCandidate = id;
@@ -606,28 +635,42 @@ function initVotingInterface() {
     submitVoteBtn.disabled = false;
   };
   
-  submitVoteBtn.addEventListener('click', () => {
-    if (!selectedCandidate || !currentVoter) return;
-    
-    const result = recordVote(currentVoter.id, currentVoter.name, selectedCandidate);
-    
-    if (result.success) {
-      showToast('Your vote has been recorded successfully!');
+submitVoteBtn.addEventListener('click', () => {
+  if (!selectedCandidate || !currentVoter) return;
+
+  fetch("http://localhost:5000/vote", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name: currentVoter.name,
+      student_id: currentVoter.id,
+      candidate_id: selectedCandidate
+    })
+  })
+  .then(res => res.text())
+  .then(msg => {
+    if (msg.includes("already")) {
+      showToast(msg, 'error');
+    } else {
+      showToast(msg);
       setTimeout(() => {
         window.location.href = 'admin.html';
       }, 1500);
-    } else {
-      showToast(result.message, 'error');
     }
+  })
+  .catch(err => {
+    console.error(err);
+    showToast("Voting failed", 'error');
   });
+});
 }
 
 function vote(candidateId) {
 
   const name = document.getElementById("voterName").value;
-  const branch = document.getElementById("branch").value;
   const studentId = document.getElementById("voterId").value;
-  const roll = document.getElementById("roll").value;
 
   if (!name || !studentId) {
     alert("Fill all details");
@@ -641,9 +684,7 @@ function vote(candidateId) {
     },
     body: JSON.stringify({
       name: name,
-      branch: branch,
       student_id: studentId,
-      roll: roll,
       candidate_id: candidateId
     })
   })
@@ -663,73 +704,99 @@ function initAdminPage() {
   
   if (!resultsContainer) return;
 
+  // 🔥 Fetch candidates from backend
   fetch("http://localhost:5000/candidates")
     .then(res => res.json())
     .then(candidates => {
 
-      const voteCounts = getVoteCounts();
-      const totalVotes = getTotalVotes();
-      
-      if (totalVotesEl) totalVotesEl.textContent = totalVotes;
-      if (totalCandidatesEl) totalCandidatesEl.textContent = candidates.length;
-      
-      if (candidates.length === 0) {
-        resultsContainer.innerHTML = `
-          <div class="empty-state">
-            ${getSVGIcon('bar-chart')}
-            <h3>No Results Yet</h3>
-            <p>Candidates need to register before results can be shown.</p>
-          </div>
-        `;
-        return;
-      }
-      
-      // Sort by votes
-      const sortedCandidates = candidates.map(c => ({
-        ...c,
-        votes: voteCounts[c.id] || 0
-      })).sort((a, b) => b.votes - a.votes);
-      
-      const maxVotes = Math.max(...sortedCandidates.map(c => c.votes), 1);
-      const colors = ['primary', 'accent', 'orange', 'pink'];
-      
-      resultsContainer.innerHTML = sortedCandidates.map((candidate, index) => {
-        const percentage = totalVotes > 0 ? ((candidate.votes / totalVotes) * 100).toFixed(1) : 0;
-        const isWinner = index === 0 && candidate.votes > 0;
-        const color = colors[index % colors.length];
-        
-        return `
-          <div class="results-card">
-            <div class="results-header">
-              <div class="results-image">
-                ${candidate.image 
-                  ? `<img src="${candidate.image}" alt="${candidate.name}">`
-                  : `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--border-light);font-size:1.5rem;color:var(--muted);">${candidate.name ? candidate.name.charAt(0) : '?'}</div>`
-                }
+      // 🔥 Fetch votes from backend
+      fetch("http://localhost:5000/results")
+        .then(res => res.json())
+        .then(voteData => {
+
+          const totalVotes = voteData.reduce((sum, c) => sum + c.votes, 0);
+
+          // ✅ Update stats
+          if (totalVotesEl) totalVotesEl.textContent = totalVotes;
+          if (totalCandidatesEl) totalCandidatesEl.textContent = candidates.length;
+
+          if (!candidates || candidates.length === 0) {
+            resultsContainer.innerHTML = `
+              <div class="empty-state">
+                ${getSVGIcon('bar-chart')}
+                <h3>No Results Yet</h3>
+                <p>Candidates need to register before results can be shown.</p>
               </div>
-              <div class="results-info">
-                <h3>
-                  ${candidate.name}
-                  ${isWinner ? `<span class="winner-badge">${getSVGIcon('trophy')} Leading</span>` : ''}
-                </h3>
-                <p>${candidate.branch} - ${candidate.year}</p>
+            `;
+            return;
+          }
+
+          // 🔥 Merge candidates + votes
+          const merged = candidates.map(c => {
+            const found = voteData.find(v => v.id === c.id);
+            return {
+              ...c,
+              votes: found ? found.votes : 0
+            };
+          });
+
+          // 🔥 Sort
+          const sortedCandidates = merged.sort((a, b) => b.votes - a.votes);
+
+          const maxVotes = Math.max(...sortedCandidates.map(c => c.votes), 1);
+          const colors = ['primary', 'accent', 'orange', 'pink'];
+
+          resultsContainer.innerHTML = sortedCandidates.map((candidate, index) => {
+
+            const percentage = totalVotes > 0 
+              ? ((candidate.votes / totalVotes) * 100).toFixed(1) 
+              : 0;
+
+            const isWinner = index === 0 && candidate.votes > 0;
+            const color = colors[index % colors.length];
+
+            return `
+              <div class="results-card">
+                <div class="results-header">
+                  <div class="results-image">
+                    ${candidate.image 
+                      ? `<img src="${candidate.image}" alt="${candidate.name}">`
+                      : `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--border-light);font-size:1.5rem;color:var(--muted);">${candidate.name.charAt(0)}</div>`
+                    }
+                  </div>
+                  <div class="results-info">
+                    <h3>
+                      ${candidate.name}
+                      ${isWinner ? `<span class="winner-badge">${getSVGIcon('trophy')} Leading</span>` : ''}
+                    </h3>
+                    <p>${candidate.branch} - ${candidate.year}</p>
+                  </div>
+                </div>
+
+                <div class="results-bar">
+                  <div class="results-bar-fill ${color}" 
+                       style="width: ${(candidate.votes / maxVotes) * 100}%">
+                  </div>
+                </div>
+
+                <div class="results-stats">
+                  <span class="results-votes">${candidate.votes} vote${candidate.votes !== 1 ? 's' : ''}</span>
+                  <span class="results-percentage">${percentage}%</span>
+                </div>
               </div>
-            </div>
-            <div class="results-bar">
-              <div class="results-bar-fill ${color}" style="width: ${(candidate.votes / maxVotes) * 100}%"></div>
-            </div>
-            <div class="results-stats">
-              <span class="results-votes">${candidate.votes} vote${candidate.votes !== 1 ? 's' : ''}</span>
-              <span class="results-percentage">${percentage}%</span>
-            </div>
-          </div>
-        `;
-      }).join('');
+            `;
+          }).join('');
+
+        })
+        .catch(err => {
+          console.error("Error fetching results:", err);
+          resultsContainer.innerHTML = "<p style='color:red;'>Error loading results</p>";
+        });
 
     })
     .catch(err => {
       console.error("Error fetching candidates:", err);
-      resultsContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load results</p>`;
+      resultsContainer.innerHTML = "<p style='color:red;'>Error loading candidates</p>";
     });
 }
 
