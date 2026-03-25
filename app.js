@@ -250,8 +250,15 @@ function updateHomeStats() {
   const voteCount = document.getElementById('vote-count');
   
   if (candidateCount) {
-    candidateCount.textContent = getCandidates().length;
-  }
+  fetch("http://localhost:5000/candidates")
+    .then(res => res.json())
+    .then(data => {
+      candidateCount.textContent = data.length;
+    })
+    .catch(() => {
+      candidateCount.textContent = "0";
+    });
+}
   if (voteCount) {
     voteCount.textContent = getTotalVotes();
   }
@@ -655,66 +662,75 @@ function initAdminPage() {
   const totalCandidatesEl = document.getElementById('total-candidates');
   
   if (!resultsContainer) return;
-  
-  const candidates = getCandidates();
-  const voteCounts = getVoteCounts();
-  const totalVotes = getTotalVotes();
-  
-  if (totalVotesEl) totalVotesEl.textContent = totalVotes;
-  if (totalCandidatesEl) totalCandidatesEl.textContent = candidates.length;
-  
-  if (candidates.length === 0) {
-    resultsContainer.innerHTML = `
-      <div class="empty-state">
-        ${getSVGIcon('bar-chart')}
-        <h3>No Results Yet</h3>
-        <p>Candidates need to register before results can be shown.</p>
-      </div>
-    `;
-    return;
-  }
-  
-  // Sort by votes
-  const sortedCandidates = candidates.map(c => ({
-    ...c,
-    votes: voteCounts[c.id] || 0
-  })).sort((a, b) => b.votes - a.votes);
-  
-  const maxVotes = Math.max(...sortedCandidates.map(c => c.votes), 1);
-  const colors = ['primary', 'accent', 'orange', 'pink'];
-  
-  resultsContainer.innerHTML = sortedCandidates.map((candidate, index) => {
-    const percentage = totalVotes > 0 ? ((candidate.votes / totalVotes) * 100).toFixed(1) : 0;
-    const isWinner = index === 0 && candidate.votes > 0;
-    const color = colors[index % colors.length];
-    
-    return `
-      <div class="results-card">
-        <div class="results-header">
-          <div class="results-image">
-            ${candidate.profileImage 
-              ? `<img src="${candidate.profileImage}" alt="${candidate.fullName}">`
-              : `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--border-light);font-size:1.5rem;color:var(--muted);">${candidate.fullName.charAt(0)}</div>`
-            }
+
+  fetch("http://localhost:5000/candidates")
+    .then(res => res.json())
+    .then(candidates => {
+
+      const voteCounts = getVoteCounts();
+      const totalVotes = getTotalVotes();
+      
+      if (totalVotesEl) totalVotesEl.textContent = totalVotes;
+      if (totalCandidatesEl) totalCandidatesEl.textContent = candidates.length;
+      
+      if (candidates.length === 0) {
+        resultsContainer.innerHTML = `
+          <div class="empty-state">
+            ${getSVGIcon('bar-chart')}
+            <h3>No Results Yet</h3>
+            <p>Candidates need to register before results can be shown.</p>
           </div>
-          <div class="results-info">
-            <h3>
-              ${candidate.fullName}
-              ${isWinner ? `<span class="winner-badge">${getSVGIcon('trophy')} Leading</span>` : ''}
-            </h3>
-            <p>${candidate.branch} - ${candidate.year}</p>
+        `;
+        return;
+      }
+      
+      // Sort by votes
+      const sortedCandidates = candidates.map(c => ({
+        ...c,
+        votes: voteCounts[c.id] || 0
+      })).sort((a, b) => b.votes - a.votes);
+      
+      const maxVotes = Math.max(...sortedCandidates.map(c => c.votes), 1);
+      const colors = ['primary', 'accent', 'orange', 'pink'];
+      
+      resultsContainer.innerHTML = sortedCandidates.map((candidate, index) => {
+        const percentage = totalVotes > 0 ? ((candidate.votes / totalVotes) * 100).toFixed(1) : 0;
+        const isWinner = index === 0 && candidate.votes > 0;
+        const color = colors[index % colors.length];
+        
+        return `
+          <div class="results-card">
+            <div class="results-header">
+              <div class="results-image">
+                ${candidate.image 
+                  ? `<img src="${candidate.image}" alt="${candidate.name}">`
+                  : `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--border-light);font-size:1.5rem;color:var(--muted);">${candidate.name ? candidate.name.charAt(0) : '?'}</div>`
+                }
+              </div>
+              <div class="results-info">
+                <h3>
+                  ${candidate.name}
+                  ${isWinner ? `<span class="winner-badge">${getSVGIcon('trophy')} Leading</span>` : ''}
+                </h3>
+                <p>${candidate.branch} - ${candidate.year}</p>
+              </div>
+            </div>
+            <div class="results-bar">
+              <div class="results-bar-fill ${color}" style="width: ${(candidate.votes / maxVotes) * 100}%"></div>
+            </div>
+            <div class="results-stats">
+              <span class="results-votes">${candidate.votes} vote${candidate.votes !== 1 ? 's' : ''}</span>
+              <span class="results-percentage">${percentage}%</span>
+            </div>
           </div>
-        </div>
-        <div class="results-bar">
-          <div class="results-bar-fill ${color}" style="width: ${(candidate.votes / maxVotes) * 100}%"></div>
-        </div>
-        <div class="results-stats">
-          <span class="results-votes">${candidate.votes} vote${candidate.votes !== 1 ? 's' : ''}</span>
-          <span class="results-percentage">${percentage}%</span>
-        </div>
-      </div>
-    `;
-  }).join('');
+        `;
+      }).join('');
+
+    })
+    .catch(err => {
+      console.error("Error fetching candidates:", err);
+      resultsContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load results</p>`;
+    });
 }
 
 // =============================================

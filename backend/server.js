@@ -40,20 +40,21 @@ app.post("/register", (req, res) => {
   const c = req.body;
 
   const sql = `
-    INSERT INTO candidates 
-    (name, branch, year, candidate_id, symbol, image, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
+  INSERT INTO candidates 
+  (name, branch, year, candidate_id, symbol, image, description, campaign_media)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
   db.query(sql, [
-    c.name,
-    c.branch,
-    c.year,
-    c.cid,
-    c.symbol,
-    c.image,
-    c.desc
-  ], (err) => {
+  c.name,
+  c.branch,
+  c.year,
+  c.cid,
+  c.symbol,
+  c.image,
+  c.desc,
+  c.media || null
+], (err) => {
 
     if (err) {
       if (err.code === "ER_DUP_ENTRY") {
