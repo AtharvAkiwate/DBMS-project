@@ -112,7 +112,7 @@ app.post("/vote", (req, res) => {
       return res.send("You have already voted!");
     }
 
-    // Insert vote
+    // Step 1: Insert vote into voters table
     const insertSql = `
       INSERT INTO voters (name, student_id, voted_for)
       VALUES (?, ?, ?)
@@ -124,7 +124,21 @@ app.post("/vote", (req, res) => {
         return res.send("Vote failed");
       }
 
-      res.send("Vote recorded successfully!");
+      // Step 2: Update candidate vote count
+      const updateSql = `
+        UPDATE candidates 
+        SET votes = votes + 1 
+        WHERE id = ?
+      `;
+
+      db.query(updateSql, [candidate_id], (err) => {
+        if (err) {
+          console.log(err);
+          return res.send("Vote recorded but count update failed");
+        }
+
+        res.send("Vote recorded successfully!");
+      });
     });
   });
 });
@@ -166,6 +180,20 @@ app.get("/check-voter/:id", (req, res) => {
     }
 
     res.json({ exists: result.length > 0 });
+  });
+});
+
+// Get total votes count
+app.get("/total-votes", (req, res) => {
+  const sql = "SELECT COUNT(*) AS totalVotes FROM voters";
+
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).send("Error fetching votes");
+    }
+
+    res.json({ totalVotes: result[0].totalVotes });
   });
 });
 

@@ -244,23 +244,32 @@ function initMobileNav() {
 // Page-Specific Functions
 // =============================================
 
-// Update stats on home page
 function updateHomeStats() {
   const candidateCount = document.getElementById('candidate-count');
   const voteCount = document.getElementById('vote-count');
   
+  // Candidate count (already correct)
   if (candidateCount) {
-  fetch("http://localhost:5000/candidates")
-    .then(res => res.json())
-    .then(data => {
-      candidateCount.textContent = data.length;
-    })
-    .catch(() => {
-      candidateCount.textContent = "0";
-    });
-}
+    fetch("http://localhost:5000/candidates")
+      .then(res => res.json())
+      .then(data => {
+        candidateCount.textContent = data.length;
+      })
+      .catch(() => {
+        candidateCount.textContent = "0";
+      });
+  }
+
+  // ✅ FIXED: Vote count from DATABASE
   if (voteCount) {
-    voteCount.textContent = getTotalVotes();
+    fetch("http://localhost:5000/total-votes")
+      .then(res => res.json())
+      .then(data => {
+        voteCount.textContent = data.totalVotes;
+      })
+      .catch(() => {
+        voteCount.textContent = "0";
+      });
   }
 }
 
@@ -962,9 +971,7 @@ function initCandidateDetail() {
                 ${getSVGIcon('id-card')} Student ID: ${c.candidate_id}
               </div>
             </div>
-            <button class="btn btn-primary btn-lg" onclick="vote(${c.id})">
-              ${getSVGIcon('vote')} Cast Vote for ${c.name}
-            </button>
+            
           </div>
         </div>
 
